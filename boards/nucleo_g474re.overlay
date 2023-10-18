@@ -1,0 +1,45 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2022 Linaro
+ */
+
+ #include <dt-bindings/pwm/pwm.h>
+
+/ {
+	gpio_enable {
+		compatible = "gpio-keys";
+		inverter_enable: button {
+			label = "inverter_enable";
+			gpios = <&gpioa 9 GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
+
+/* Set PWM that are attached to the SimpleFoC dev board's power stage */
+&timers3 {
+     status = "okay";
+     st,prescaler = <0>;
+
+     inverter_pwm_a: pwm {
+         status = "okay";
+         pinctrl-0 = <&tim3_ch2_pc7 &tim3_ch1_pb4>; 
+         pinctrl-names = "default";
+     };
+};
+
+&timers2 {
+	status = "okay";
+
+	inverter_pwm_b: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim2_ch3_pb10>; 
+		pinctrl-names = "default";
+	};
+};
+
+&i2c1 {
+	pinctrl-0 = <&i2c1_scl_pb8 &i2c1_sda_pb9>;
+	pinctrl-names = "default";
+	status = "okay";
+};
