@@ -5,8 +5,6 @@
 
 struct adrc_control_law {
     struct siso_control_law interface;
-    float wo;
-    float wc;
     float b0;
     float kp;
     float kd;
@@ -24,7 +22,7 @@ static inline struct siso_control_law * get_adrc_control_law_interface(struct ad
     return NULL;
 }
 
-int adrc_control_law_tune(struct adrc_control_law *al, float wo, float wc, float b0, float kp, float kd);
+int adrc_control_law_tune(struct adrc_control_law *al, float wo, float b0, float kp, float kd);
 
 #endif
 

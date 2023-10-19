@@ -1,7 +1,9 @@
 #ifndef __CONTROL_LAW_H
 #define __CONTROL_LAW_H
 
+#include <stddef.h>
 #include <errno.h>
+#include <math.h>
 
 //Abstract control Law class and methods:
 struct siso_control_law {
@@ -38,7 +40,7 @@ static inline int control_law_set(struct siso_control_law *cl, float reference, 
     return -ENOTSUP;
 }
 
-static inline float control_update(struct siso_control_law *cl, float dt, float *command)
+static inline float control_law_update(struct siso_control_law *cl, float dt, float *command)
 {
     if(!cl)
         return -EINVAL;
@@ -49,5 +51,9 @@ static inline float control_update(struct siso_control_law *cl, float dt, float 
 
     return -ENOTSUP;
 }
+
+
+//extract derived control law class from this base class:
+#define CL_CONTAINER_OF(ptr, type, field)  ((type *)(((char *)(ptr)) - offsetof(type, field)))
 
 #endif

@@ -10,7 +10,7 @@ struct pid_control_law {
     float kd;
     float integrator;
     float prev_error;
-    float max_integrator_value;
+    float max_integrator;
 };
 
 static inline struct siso_control_law * get_pid_control_law_interface(struct pid_control_law  *pl)
@@ -22,7 +22,7 @@ static inline struct siso_control_law * get_pid_control_law_interface(struct pid
     return NULL;
 }
 
-int pid_control_law_tune(struct pid_control_law *pl, float kp, float ki, float kd);
+int pid_control_law_tune(struct pid_control_law *pl, float kp, float ki, float kd, float max_integrator);
 
 #endif
 
