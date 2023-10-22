@@ -1,10 +1,13 @@
-/ {
-	aliases {
-		mf4005-can0 = &fdcan1;
-	};
-};
-
 &fdcan1 {
 	bus-speed = <1000000>;
 	status = "okay";
+};
+
+&timers2 {
+	st,prescaler = <1>;
+	status = "okay";
+
+	counter {
+		status = "okay";
+	};
 };
