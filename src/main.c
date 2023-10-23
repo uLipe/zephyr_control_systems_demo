@@ -11,21 +11,28 @@
 
 #include "motor_hardware.h"
 #include "motor_hardware_mf4005.h"
+#include "motor_control_pipeline.h"
 
 static const struct device * motor_can_port = DEVICE_DT_GET(DT_NODELABEL(fdcan1));
 static struct motor_hardware_mf4005 motor_1;
+static struct motor_control_pipeline control_1;
 
 int main(void)
 {
+	motor_hardware_mf4005_init(&motor_1, motor_can_port);
+	motor_control_pipeline_add_hw(&control_1, motor_hardware_mf4005_get_if(&motor_1));
+	motor_control_pipeline_register(&control_1, 4);
+
 	return 0;
 }
 
 static int motor_set_ref(const struct shell *shell, size_t argc, char **argv)
 {
-	if (argc != 3) {
+	if (argc != 2) {
 		return -EINVAL;
 	}
-	return 0;
+
+	return motor_control_pipeline_set_position(&control_1, (strtof(argv[1], NULL)));
 }
 
 static int motor_gen_ramp(const struct shell *shell, size_t argc, char **argv)
@@ -71,7 +78,6 @@ static int motor_set_power(const struct shell *shell, size_t argc, char **argv)
 		return -EINVAL;
 	}
 
-	motor_hardware_mf4005_init(&motor_1, motor_can_port);
 	struct motor_hardware_if *m = motor_hardware_mf4005_get_if(&motor_1);
 	return motor_hardware_set_current(m, (strtof(argv[1], NULL)));
 }

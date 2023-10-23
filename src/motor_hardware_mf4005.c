@@ -35,15 +35,10 @@ static int reset (struct motor_hardware_if *self)
 		.dlc = 8
 	};
 
-	int err = can_start(mh->can_port);
-	if (err) {
-		printf("Error starting CAN controller [%d]", err);
-		return 0;
-	}
-
+	can_start(mh->can_port);
     can_add_rx_filter_msgq(mh->can_port, &mh_can_msgq, &motor_filter);
 
-    err = can_send(mh->can_port, &tx_frame, K_MSEC(100), NULL, NULL);
+    int err = can_send(mh->can_port, &tx_frame, K_MSEC(100), NULL, NULL);
     if(err)
         return err;
 
@@ -75,12 +70,6 @@ static int set_current (struct motor_hardware_if *self, float current)
 		.dlc = 8
 	};
 
-    struct can_frame rx_frame = {
-		.flags = 0,
-		.id = MF4005_CAN_DEVID,
-		.dlc = 8
-	};
-
     if(current > mh_max_current_amperes) {
         current = mh_max_current_amperes;
     } else if (current < -mh_max_current_amperes) {
@@ -93,19 +82,9 @@ static int set_current (struct motor_hardware_if *self, float current)
     tx_frame.data[4] = (uint8_t)(command & 0xFF);
     tx_frame.data[5] = (uint8_t)((command >> 8) & 0xFF);
 
-    int err = can_send(mh->can_port, &tx_frame, K_MSEC(100), NULL, NULL);
+    int err = can_send(mh->can_port, &tx_frame, K_NO_WAIT, NULL, NULL);
     if(err)
         return err;
-
-    err = k_msgq_get(&mh_can_msgq, &rx_frame, K_MSEC(100));
-    if(err)
-        return err;
-
-    int16_t raw_angle = rx_frame.data[7];
-    raw_angle <<= 8;
-    raw_angle |= rx_frame.data[6];
-
-    mh->current_angle_deg = (float )(raw_angle) * mh_encoder_to_degrees;
 
     return 0;
 }
@@ -115,7 +94,27 @@ static int get_angle(struct motor_hardware_if *self, float *degrees)
     struct motor_hardware_mf4005 *mh =
         MH_CONTAINER_OF(self, struct motor_hardware_mf4005, interface);
 
-    return mh->current_angle_deg;
+    struct can_frame rx_frame = {
+		.flags = 0,
+		.id = MF4005_CAN_DEVID,
+		.dlc = 8
+	};
+
+    if(!degrees) {
+        return -EINVAL;
+    }
+
+    int err = k_msgq_get(&mh_can_msgq, &rx_frame, K_NO_WAIT);
+    if(!err) {
+        int16_t raw_angle = rx_frame.data[7];
+        raw_angle <<= 8;
+        raw_angle |= rx_frame.data[6];
+
+        mh->current_angle_deg = (float )(raw_angle) * mh_encoder_to_degrees;
+    }
+
+    *degrees = mh->current_angle_deg;
+    return err;
 }
 
 int motor_hardware_mf4005_init(struct motor_hardware_mf4005 *mh, const struct device *can_port)

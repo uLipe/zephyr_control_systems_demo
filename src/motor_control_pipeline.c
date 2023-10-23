@@ -4,7 +4,7 @@
 #include <zephyr/drivers/counter.h>
 #include "motor_control_pipeline.h"
 
-#define CONTROL_PIPELINE_US_PERIOD (250)
+#define CONTROL_PIPELINE_US_PERIOD (500)
 
 static struct motor_control_pipeline* pipeline;
 static float now_seconds = 0.0f;
@@ -24,21 +24,29 @@ static void motor_control_work_handler(struct k_work *work)
         float control_effort;
         int ticks = pipeline->ticks;
         int sample_ratio = pipeline->sample_ratio;
+        int err;
 
         ticks++;
         if(ticks == sample_ratio) {
             ticks = 0;
-            float dt = now_seconds - last_time;
+            float dt = fabs(now_seconds - last_time);
 
-            motor_hardware_get_angle(pipeline->hw, &current_position);
-            control_law_set(pipeline->position_cl, target_position, current_position);
-            control_law_update(pipeline->position_cl, dt, &control_effort);
+            err = motor_hardware_get_angle(pipeline->hw, &current_position);
+
+            if(pipeline->position_cl) {
+                control_law_set(pipeline->position_cl, target_position, current_position);
+                control_law_update(pipeline->position_cl, dt, &control_effort);
+            } else {
+                control_effort = target_position;
+            }
+
             motor_hardware_set_current(pipeline->hw, control_effort);
 
             pipeline->control_effort = control_effort;
             pipeline->current_position = current_position;
             pipeline->last_time = now_seconds;
             pipeline->dt = dt;
+            pipeline->reading_error = err;
         }
         pipeline->ticks = ticks;
     }
@@ -51,6 +59,7 @@ static void timer_interrupt_fn(const struct device *counter_dev,
 				      void *user_data)
 {
     k_work_submit(&motor_work);
+    counter_set_channel_alarm(timer_dev, 0, &alarm_cfg);
 }
 
 static int motor_control_pipeline_init_backend(void)
@@ -110,6 +119,7 @@ int motor_control_pipeline_register(struct motor_control_pipeline* cp, int sampl
 
     cp->sample_ratio = sample_ratio;
     cp->ticks = 0;
+    cp->last_time = 0.0f;
 
     pipeline = cp;
 
