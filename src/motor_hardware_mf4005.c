@@ -12,7 +12,7 @@ const float mh_encoder_to_degrees = (360.0f / (float)(1 << 16)); //MF4005 encode
 const float mh_current_to_raw = (2048.0f / 3.0f); //MF4005 max current is 3.0A
 
 static const struct can_filter motor_filter = {
-    .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
+    .flags = CAN_FILTER_DATA,
     .id = MF4005_CAN_DEVID,
     .mask = CAN_STD_ID_MASK
 };
@@ -35,9 +35,15 @@ static int reset (struct motor_hardware_if *self)
 		.dlc = 8
 	};
 
+	int err = can_start(mh->can_port);
+	if (err) {
+		printf("Error starting CAN controller [%d]", err);
+		return 0;
+	}
+
     can_add_rx_filter_msgq(mh->can_port, &mh_can_msgq, &motor_filter);
 
-    int err = can_send(mh->can_port, &tx_frame, K_MSEC(100), NULL, NULL);
+    err = can_send(mh->can_port, &tx_frame, K_MSEC(100), NULL, NULL);
     if(err)
         return err;
 
@@ -84,8 +90,8 @@ static int set_current (struct motor_hardware_if *self, float current)
     int16_t command = (int16_t)(current * mh_current_to_raw);
 
     tx_frame.data[0] = MF4005_SET_CURRENT_CMD;
-    tx_frame.data[1] = (uint8_t)(command & 0xFF);
-    tx_frame.data[2] = (uint8_t)((command >> 8) & 0xFF);
+    tx_frame.data[4] = (uint8_t)(command & 0xFF);
+    tx_frame.data[5] = (uint8_t)((command >> 8) & 0xFF);
 
     int err = can_send(mh->can_port, &tx_frame, K_MSEC(100), NULL, NULL);
     if(err)

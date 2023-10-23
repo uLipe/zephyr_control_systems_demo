@@ -70,6 +70,8 @@ static int motor_set_power(const struct shell *shell, size_t argc, char **argv)
 	if (argc != 2) {
 		return -EINVAL;
 	}
+
+	motor_hardware_mf4005_init(&motor_1, motor_can_port);
 	struct motor_hardware_if *m = motor_hardware_mf4005_get_if(&motor_1);
 	return motor_hardware_set_current(m, (strtof(argv[1], NULL)));
 }
