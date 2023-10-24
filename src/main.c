@@ -9,6 +9,10 @@
 #include <zephyr/shell/shell.h>
 #include <stdlib.h>
 
+#include "control_law.h"
+#include "adrc_control_law.h"
+#include "pid_control_law.h"
+
 #include "motor_hardware.h"
 #include "motor_hardware_mf4005.h"
 #include "motor_control_pipeline.h"
@@ -16,12 +20,16 @@
 static const struct device * motor_can_port = DEVICE_DT_GET(DT_NODELABEL(fdcan1));
 static struct motor_hardware_mf4005 motor_1;
 static struct motor_control_pipeline control_1;
+static struct adrc_control_law motor_adrc_1;
+static struct pid_control_law motor_pid_1;
 
 int main(void)
 {
+	pid_control_law_tune(&motor_pid_1, 1.0f, 0.0f, 0.0f, 36000);
+	adrc_control_law_tune(&motor_adrc_1, 62800.0f, 1.0f, 628.0f, 209.0f);
 	motor_hardware_mf4005_init(&motor_1, motor_can_port);
 	motor_control_pipeline_add_hw(&control_1, motor_hardware_mf4005_get_if(&motor_1));
-	motor_control_pipeline_register(&control_1, 4);
+	motor_control_pipeline_register(&control_1, 1);
 
 	return 0;
 }
@@ -47,8 +55,16 @@ static int motor_gen_ramp(const struct shell *shell, size_t argc, char **argv)
 
 static int motor_change_control(const struct shell *shell, size_t argc, char **argv)
 {
-	if (argc != 3) {
+	if (argc != 2) {
 		return -EINVAL;
+	}
+
+	long option = strtol(argv[1], NULL, 10);
+
+	if(!option) {
+		motor_control_pipeline_add_control(&control_1, get_pid_control_law_interface(&motor_pid_1));
+	} else {
+		motor_control_pipeline_add_control(&control_1, get_adrc_control_law_interface(&motor_adrc_1));
 	}
 
 	return 0;
@@ -56,9 +72,15 @@ static int motor_change_control(const struct shell *shell, size_t argc, char **a
 
 static int motor_set_gains_pid(const struct shell *shell, size_t argc, char **argv)
 {
-	if (argc != 3) {
+	if (argc != 5) {
 		return -EINVAL;
 	}
+
+	pid_control_law_tune(&motor_pid_1,
+						(strtof(argv[1], NULL)),
+						(strtof(argv[2], NULL)),
+						(strtof(argv[3], NULL)),
+						(strtof(argv[4], NULL)));
 
 	return 0;
 }
