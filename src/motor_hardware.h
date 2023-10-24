@@ -8,6 +8,7 @@
 struct motor_hardware_if {
     int (*reset) (struct motor_hardware_if *self);
     int (*set_current) (struct motor_hardware_if *self, float current);
+    int (*set_speed) (struct motor_hardware_if *self, float speed);
     int (*get_angle)(struct motor_hardware_if *self, float *degrees);
 };
 
@@ -18,6 +19,18 @@ static inline int motor_hardware_reset(struct motor_hardware_if *mh)
 
     if(mh->reset) {
         return mh->reset(mh);
+    }
+
+    return -ENOTSUP;
+}
+
+static inline int motor_hardware_set_speed(struct motor_hardware_if *mh, float speed)
+{
+    if(!mh)
+        return -EINVAL;
+
+    if(mh->set_speed) {
+        return mh->set_speed(mh, speed);
     }
 
     return -ENOTSUP;

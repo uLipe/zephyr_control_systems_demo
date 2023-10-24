@@ -1,15 +1,19 @@
+#include <zephyr/sys/printk.h>
 #include "motor_hardware_mf4005.h"
 
 #define MF4005_CAN_DEVID        0x141
 #define MF4005_SET_CURRENT_CMD  0xA1
+#define MF4005_SET_SPEED_CMD    0xA2
 #define MF4005_TURN_OFF_CMD     0x80
 #define MF4005_TURN_ON_CMD      0x88
 
 CAN_MSGQ_DEFINE(mh_can_msgq, 2);
 
 const float mh_max_current_amperes = 2.8f;
-const float mh_encoder_to_degrees = (360.0f / (float)(1 << 16)); //MF4005 encoder is 18bit
-const float mh_current_to_raw = (2048.0f / 3.0f); //MF4005 max current is 3.0A
+const float mh_max_speed_dps = 14000.0f;
+const float mh_encoder_to_degrees = (360.0f / 65536.0f); //MF4005 encoder is 16bit
+const float mh_current_to_raw = (32.0f / 0.240f); //MF4005 max current is 240 mA
+const float mh_speed_to_raw = 100.0f;
 
 static const struct can_filter motor_filter = {
     .flags = CAN_FILTER_DATA,
@@ -46,7 +50,6 @@ static int reset (struct motor_hardware_if *self)
     if(err)
         return err;
 
-    k_sleep(K_SECONDS(1));
     tx_frame.data[0] = MF4005_TURN_ON_CMD;
 
     can_send(mh->can_port, &tx_frame, K_MSEC(100), NULL, NULL);
@@ -56,10 +59,10 @@ static int reset (struct motor_hardware_if *self)
     err = k_msgq_get(&mh_can_msgq, &rx_frame, K_MSEC(100));
         return err;
 
-    return motor_hardware_set_current(self, 0.0f);
+    return motor_hardware_set_speed(self, 0.0f);
 }
 
-static int set_current (struct motor_hardware_if *self, float current)
+static int set_speed (struct motor_hardware_if *self, float speed)
 {
     struct motor_hardware_mf4005 *mh =
         MH_CONTAINER_OF(self, struct motor_hardware_mf4005, interface);
@@ -70,17 +73,19 @@ static int set_current (struct motor_hardware_if *self, float current)
 		.dlc = 8
 	};
 
-    if(current > mh_max_current_amperes) {
-        current = mh_max_current_amperes;
-    } else if (current < -mh_max_current_amperes) {
-        current = -mh_max_current_amperes;
+    if(speed > mh_max_speed_dps) {
+        speed = mh_max_speed_dps;
+    } else if (speed < -mh_max_speed_dps) {
+        speed = -mh_max_speed_dps;
     }
 
-    int16_t command = (int16_t)(current * mh_current_to_raw);
+    int32_t command = (int32_t)(speed * mh_speed_to_raw);
 
-    tx_frame.data[0] = MF4005_SET_CURRENT_CMD;
+    tx_frame.data[0] = MF4005_SET_SPEED_CMD;
     tx_frame.data[4] = (uint8_t)(command & 0xFF);
-    tx_frame.data[5] = (uint8_t)((command >> 8) & 0xFF);
+    tx_frame.data[5] = (uint8_t)((command >> 8)  & 0xFF);
+    tx_frame.data[6] = (uint8_t)((command >> 16) & 0xFF);
+    tx_frame.data[7] = (uint8_t)((command >> 24) & 0xFF);
 
     int err = can_send(mh->can_port, &tx_frame, K_NO_WAIT, NULL, NULL);
     if(err)
@@ -106,7 +111,7 @@ static int get_angle(struct motor_hardware_if *self, float *degrees)
 
     int err = k_msgq_get(&mh_can_msgq, &rx_frame, K_NO_WAIT);
     if(!err) {
-        int16_t raw_angle = rx_frame.data[7];
+        uint16_t raw_angle = rx_frame.data[7];
         raw_angle <<= 8;
         raw_angle |= rx_frame.data[6];
 
@@ -124,7 +129,7 @@ int motor_hardware_mf4005_init(struct motor_hardware_mf4005 *mh, const struct de
 
     mh->can_port = can_port;
     mh->interface.reset = reset;
-    mh->interface.set_current = set_current;
+    mh->interface.set_speed = set_speed;
     mh->interface.get_angle = get_angle;
 
     return motor_hardware_reset(&mh->interface);

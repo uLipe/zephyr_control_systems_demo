@@ -16,6 +16,7 @@ struct motor_control_pipeline {
     int ticks;
     int sample_ratio;
     int reading_error;
+    int writing_error;
 };
 
 int motor_control_pipeline_add_hw(struct motor_control_pipeline* cp, struct motor_hardware_if *hw);

@@ -24,7 +24,7 @@ static void motor_control_work_handler(struct k_work *work)
         float control_effort;
         int ticks = pipeline->ticks;
         int sample_ratio = pipeline->sample_ratio;
-        int err;
+        int err, werr;
 
         ticks++;
         if(ticks == sample_ratio) {
@@ -40,13 +40,14 @@ static void motor_control_work_handler(struct k_work *work)
                 control_effort = target_position;
             }
 
-            motor_hardware_set_current(pipeline->hw, control_effort);
+            werr = motor_hardware_set_speed(pipeline->hw, control_effort);
 
             pipeline->control_effort = control_effort;
             pipeline->current_position = current_position;
             pipeline->last_time = now_seconds;
             pipeline->dt = dt;
             pipeline->reading_error = err;
+            pipeline->writing_error = werr;
         }
         pipeline->ticks = ticks;
     }
