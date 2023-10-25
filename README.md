@@ -18,7 +18,7 @@ has a CAN controller.
 -------------
 * MF4005 CAN Bus servo motor (Make sure to checkout a CAN Bus version not the RS485):
     * https://www.aliexpress.com/w/wholesale-mf4005.html?spm=a2g0o.detail.search.0
-    * https://en.lkmotor.cn
+    * http://en.lkmotor.cn
 
 * ST Nucleo G474RE:
     * https://www.st.com/en/evaluation-tools/nucleo-g474re.html
