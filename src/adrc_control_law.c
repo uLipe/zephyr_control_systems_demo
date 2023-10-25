@@ -70,7 +70,7 @@ static int update (struct siso_control_law * self, float dt, float *command)
     return 0;
 }
 
-int adrc_control_law_tune(struct adrc_control_law *al, float wo, float b0, float kp, float kd)
+int adrc_control_law_tune(struct adrc_control_law *al, float dt, float wo, float b0, float kp, float kd)
 {
     if(!al)
         return -EINVAL;
@@ -82,10 +82,13 @@ int adrc_control_law_tune(struct adrc_control_law *al, float wo, float b0, float
     al->kp = kp;
     al->kd = kd;
 
-    //Compute observer gains:
-    al->l[0] = 3.0f * wo;
-    al->l[1] = 3.0f * (wo * wo);
-    al->l[2] = (wo * wo * wo);
+    //Compute discrete time observer gains:
+    float z_eso = exp(-wo * dt);
+    float one_minus_zeso = (1 - z_eso);
+
+    al->l[2] = 1 - (z_eso * z_eso * z_eso);
+    al->l[1] = (3.0f /(2 * dt)) * (one_minus_zeso * one_minus_zeso) * (1 + z_eso);
+    al->l[0] = (1 / ( dt * dt)) * (one_minus_zeso * one_minus_zeso * one_minus_zeso * one_minus_zeso);
 
     return (control_law_reset(&al->interface));
 }
