@@ -26,10 +26,12 @@ static struct pid_control_law motor_pid_1;
 int main(void)
 {
 	pid_control_law_tune(&motor_pid_1, 1.0f, 0.0f, 0.0f, 36000);
-	adrc_control_law_tune(&motor_adrc_1, 62800.0f, 1.0f, 628.0f, 209.0f);
+	adrc_control_law_tune(&motor_adrc_1, 0.0005f, 300.0f, 1.0f, 10.0f, 0.001f);
 	motor_hardware_mf4005_init(&motor_1, motor_can_port);
 	motor_control_pipeline_add_hw(&control_1, motor_hardware_mf4005_get_if(&motor_1));
+	motor_control_pipeline_add_control(&control_1, get_adrc_control_law_interface(&motor_adrc_1));
 	motor_control_pipeline_register(&control_1, 1);
+	motor_control_pipeline_set_position(&control_1, 90);
 
 	return 0;
 }
@@ -49,7 +51,18 @@ static int motor_gen_ramp(const struct shell *shell, size_t argc, char **argv)
 		return -EINVAL;
 	}
 
+	float start = strtof(argv[1], NULL);
+	float end = strtof(argv[2], NULL);
+	float current = start;
+	float steps = (end - start) / 16.0f;
+
+	for(; current < end; current += steps) {
+		motor_control_pipeline_set_position(&control_1, current);
+		k_sleep(K_MSEC(250));
+	}
+
 	return 0;
+
 }
 
 
@@ -83,13 +96,21 @@ static int motor_set_gains_pid(const struct shell *shell, size_t argc, char **ar
 						(strtof(argv[4], NULL)));
 
 	return 0;
+
 }
 
 static int motor_set_gains_adrc(const struct shell *shell, size_t argc, char **argv)
 {
-	if (argc != 3) {
+	if (argc != 6) {
 		return -EINVAL;
 	}
+
+	adrc_control_law_tune(&motor_adrc_1,
+						(strtof(argv[1], NULL)),
+						(strtof(argv[2], NULL)),
+						(strtof(argv[3], NULL)),
+						(strtof(argv[4], NULL)),
+						(strtof(argv[5], NULL)));
 
 	return 0;
 }
