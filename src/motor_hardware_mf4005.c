@@ -27,19 +27,19 @@ static int reset (struct motor_hardware_if *self)
         MH_CONTAINER_OF(self, struct motor_hardware_mf4005, interface);
 
     struct can_frame tx_frame = {
-		.flags = 0,
-		.id = MF4005_CAN_DEVID,
-		.dlc = 8,
+        .flags = 0,
+        .id = MF4005_CAN_DEVID,
+        .dlc = 8,
         .data[0] = MF4005_TURN_OFF_CMD
 	};
 
     struct can_frame rx_frame = {
-		.flags = 0,
-		.id = MF4005_CAN_DEVID,
-		.dlc = 8
-	};
+        .flags = 0,
+        .id = MF4005_CAN_DEVID,
+        .dlc = 8
+    };
 
-	can_start(mh->can_port);
+    can_start(mh->can_port);
     can_add_rx_filter_msgq(mh->can_port, &mh_can_msgq, &motor_filter);
 
     int err = can_send(mh->can_port, &tx_frame, K_MSEC(100), NULL, NULL);
@@ -68,10 +68,10 @@ static int set_speed (struct motor_hardware_if *self, float speed)
         MH_CONTAINER_OF(self, struct motor_hardware_mf4005, interface);
 
     struct can_frame tx_frame = {
-		.flags = 0,
-		.id = MF4005_CAN_DEVID,
-		.dlc = 8
-	};
+        .flags = 0,
+        .id = MF4005_CAN_DEVID,
+        .dlc = 8
+    };
 
     if(speed > mh_max_speed_dps) {
         speed = mh_max_speed_dps;
@@ -100,10 +100,10 @@ static int get_angle(struct motor_hardware_if *self, float *degrees)
         MH_CONTAINER_OF(self, struct motor_hardware_mf4005, interface);
 
     struct can_frame rx_frame = {
-		.flags = 0,
-		.id = MF4005_CAN_DEVID,
-		.dlc = 8
-	};
+        .flags = 0,
+        .id = MF4005_CAN_DEVID,
+        .dlc = 8
+    };
 
     if(!degrees) {
         return -EINVAL;

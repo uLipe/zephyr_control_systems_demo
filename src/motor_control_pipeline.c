@@ -56,8 +56,8 @@ static void motor_control_work_handler(struct k_work *work)
 K_WORK_DEFINE(motor_work, motor_control_work_handler);
 
 static void timer_interrupt_fn(const struct device *counter_dev,
-				      uint8_t chan_id, uint32_t ticks,
-				      void *user_data)
+                            uint8_t chan_id, uint32_t ticks,
+                            void *user_data)
 {
     k_work_submit(&motor_work);
     counter_set_channel_alarm(timer_dev, 0, &alarm_cfg);
@@ -66,10 +66,10 @@ static void timer_interrupt_fn(const struct device *counter_dev,
 static int motor_control_pipeline_init_backend(void)
 {
     counter_start(timer_dev);
-	alarm_cfg.flags = 0;
-	alarm_cfg.ticks = counter_us_to_ticks(timer_dev, CONTROL_PIPELINE_US_PERIOD);
-	alarm_cfg.callback = timer_interrupt_fn;
-	alarm_cfg.user_data = &alarm_cfg;
+    alarm_cfg.flags = 0;
+    alarm_cfg.ticks = counter_us_to_ticks(timer_dev, CONTROL_PIPELINE_US_PERIOD);
+    alarm_cfg.callback = timer_interrupt_fn;
+    alarm_cfg.user_data = &alarm_cfg;
     counter_set_channel_alarm(timer_dev, 0, &alarm_cfg);
 
     return 0;
