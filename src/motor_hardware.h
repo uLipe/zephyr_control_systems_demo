@@ -8,6 +8,7 @@
 struct motor_hardware_if {
     int (*reset) (struct motor_hardware_if *self);
     int (*set_current) (struct motor_hardware_if *self, float current);
+    int (*set_voltage) (struct motor_hardware_if *self, float voltage);
     int (*set_speed) (struct motor_hardware_if *self, float speed);
     int (*get_angle)(struct motor_hardware_if *self, float *degrees);
 };
@@ -43,6 +44,18 @@ static inline int motor_hardware_set_current(struct motor_hardware_if *mh, float
 
     if(mh->set_current) {
         return mh->set_current(mh, current);
+    }
+
+    return -ENOTSUP;
+}
+
+static inline int motor_hardware_set_voltage(struct motor_hardware_if *mh, float voltage)
+{
+    if(!mh)
+        return -EINVAL;
+
+    if(mh->set_voltage) {
+        return mh->set_voltage(mh, voltage);
     }
 
     return -ENOTSUP;
